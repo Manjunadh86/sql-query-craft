@@ -1,0 +1,5 @@
+name: sql_query_craft
+version: "0.1.0"
+description: "SQL Query Craft - A text-to-SQL environment where AI agents write SQL queries to answer business analytics questions against a realistic e-commerce database. Features 4 tasks across easy/medium/hard difficulty with rich partial-credit reward shaping."
+action: SQLAction
+observation: SQLObservation

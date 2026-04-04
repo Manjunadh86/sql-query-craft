@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-sql-query-craft"
+version = "0.1.0"
+description = "SQL Query Craft - A text-to-SQL OpenEnv environment for training AI agents to write SQL queries against realistic business databases."
+requires-python = ">=3.10"
+dependencies = [
+    "openenv-core[core]>=0.2.2",
+    "fastapi>=0.115.0",
+    "pydantic>=2.0.0",
+    "uvicorn[standard]>=0.24.0",
+    "requests>=2.31.0",
+    "openai>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+server = "sql_query_craft.server.app:main"
+
+[tool.setuptools]
+packages = ["sql_query_craft", "sql_query_craft.server"]
+package-dir = { "sql_query_craft" = ".", "sql_query_craft.server" = "server" }
+
+[tool.setuptools.package-data]
+sql_query_craft = ["**/*.yaml", "**/*.yml"]
