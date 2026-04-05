@@ -1,3 +1,14 @@
+---
+title: SQL Query Craft
+emoji: 🗃️
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7069
+tags:
+  - openenv
+---
+
 # SQL Query Craft — OpenEnv Environment
 
 A real-world **text-to-SQL** OpenEnv environment where AI agents learn to write SQL queries to answer business analytics questions against a realistic e-commerce database.
