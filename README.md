@@ -71,10 +71,11 @@ Rewards provide **rich partial-credit signals** (not just binary success/failure
 | Column Names        | 0.15   | Column names match expected names                  |
 | Row Count           | 0.10   | Result has the expected number of rows             |
 | Data Match          | 0.45   | Result values match the expected output            |
-| **Total**           | **1.00**|                                                    |
+| **Max**             | **0.95**| Capped to keep score strictly below 1.0            |
 
-- **Destructive penalty**: Queries containing DROP, DELETE, INSERT, etc. receive a -0.20 penalty.
-- **Episode ends** when reward >= 0.95 (success) or step count reaches max_steps.
+- All rewards are strictly in the open interval **(0.05, 0.95)** — never exactly 0 or 1.
+- **Destructive penalty**: Queries containing DROP, DELETE, INSERT, etc. receive a -0.15 penalty.
+- **Episode ends** when reward >= 0.90 (success) or step count reaches max_steps.
 - The reward signals enable learning even when the agent's query is partially correct.
 
 ## Database Schema

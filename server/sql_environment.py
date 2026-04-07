@@ -2,9 +2,7 @@
 SQL Query Craft Environment Server.
 
 Implements the OpenEnv Environment interface for text-to-SQL tasks.
-The agent receives a natural language question and database schema,
-then submits SQL queries. Reward is based on query correctness with
-rich partial-credit signals.
+All rewards are strictly in the open interval (0.05, 0.95).
 """
 
 from __future__ import annotations
@@ -16,7 +14,7 @@ from typing import Any, Optional
 from openenv.core.env_server.interfaces import Environment
 
 from .database import SCHEMA_DESCRIPTION, create_database, execute_query, format_query_result
-from .graders import grade_query
+from .graders import MIN_REWARD, MAX_REWARD, grade_query
 from .tasks import TaskDefinition, get_task, list_tasks
 
 try:
@@ -25,14 +23,11 @@ except ImportError:
     from sql_query_craft.models import SQLAction, SQLObservation, SQLState
 
 
+def _clamp_reward(r: float) -> float:
+    return max(MIN_REWARD, min(MAX_REWARD, r))
+
+
 class SQLQueryCraftEnvironment(Environment):
-    """
-    Text-to-SQL environment where an AI agent writes SQL queries
-    to answer business analytics questions.
-
-    Supports multiple tasks (easy → hard) with deterministic grading.
-    """
-
     SUPPORTS_CONCURRENT_SESSIONS = True
 
     def __init__(self) -> None:
@@ -65,7 +60,7 @@ class SQLQueryCraftEnvironment(Environment):
 
         return SQLObservation(
             done=False,
-            reward=0.01,
+            reward=MIN_REWARD,
             question=self._task.question,
             schema_description=SCHEMA_DESCRIPTION,
             query_result="",
@@ -92,7 +87,7 @@ class SQLQueryCraftEnvironment(Environment):
         if self._task is None:
             return SQLObservation(
                 done=True,
-                reward=0.01,
+                reward=MIN_REWARD,
                 query_error="Environment not initialized. Call reset() first.",
                 metadata={},
             )
@@ -111,19 +106,16 @@ class SQLQueryCraftEnvironment(Environment):
         result_str = format_query_result(columns, rows, error)
 
         if error:
-            reward = 0.01
+            reward = MIN_REWARD
             breakdown = {"error": error}
         else:
             reward, breakdown = grade_query(self._db, self._task, action.query)
 
-        # Clamp to open interval (0, 1) per OpenEnv spec
-        reward = max(reward, 0.01)
-        reward = min(reward, 0.99)
-
+        reward = _clamp_reward(reward)
         self._state.best_reward = max(self._state.best_reward, reward)
 
         done = (
-            reward >= 0.95
+            reward >= 0.90
             or self._state.step_count >= self._task.max_steps
         )
 

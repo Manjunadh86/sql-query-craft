@@ -1,5 +1,18 @@
 name: sql_query_craft
 version: "0.1.0"
-description: "SQL Query Craft - A text-to-SQL environment where AI agents write SQL queries to answer business analytics questions against a realistic e-commerce database. Features 4 tasks across easy/medium/hard difficulty with rich partial-credit reward shaping."
+description: "SQL Query Craft - A text-to-SQL environment where AI agents write SQL queries to answer business analytics questions against a realistic e-commerce database."
 action: SQLAction
 observation: SQLObservation
+tasks:
+  - name: easy_employee_lookup
+    difficulty: easy
+    description: "Find active Engineering employees earning above $75K"
+  - name: medium_sales_analysis
+    difficulty: medium
+    description: "Calculate revenue per product category for completed orders"
+  - name: hard_department_top_earner
+    difficulty: hard
+    description: "Find highest-paid employee per department with salary percentage"
+  - name: hard_customer_spending
+    difficulty: hard
+    description: "Find high-frequency customers with spending rankings"

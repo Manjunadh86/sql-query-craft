@@ -32,6 +32,8 @@ MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
 BENCHMARK = "sql_query_craft"
 TEMPERATURE = 0.3
 MAX_TOKENS = 512
+MIN_REWARD = 0.05
+MAX_REWARD = 0.95
 
 ALL_TASKS = [
     "easy_employee_lookup",
@@ -163,7 +165,7 @@ async def run_task(llm_client: OpenAI, env: SQLQueryCraftEnv, task_name: str) ->
             result = await env.step(SQLAction(query=query))
             obs = result.observation
 
-            reward = result.reward or 0.0
+            reward = result.reward if result.reward is not None else MIN_REWARD
             done = result.done
             error = obs.query_error if obs.query_error else None
 
