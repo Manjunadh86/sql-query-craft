@@ -84,11 +84,11 @@ def grade_query(
     }
 
     if not student_query or not student_query.strip():
-        return 0.0, breakdown
+        return 0.01, breakdown
 
     if _check_destructive(student_query):
         breakdown["penalty"] = -PENALTY_DESTRUCTIVE
-        return 0.0, breakdown
+        return 0.01, breakdown
 
     # Execute student query
     try:
@@ -97,7 +97,7 @@ def grade_query(
         student_cols = [desc[0] for desc in cur_s.description] if cur_s.description else []
         student_rows = cur_s.fetchall()
     except Exception:
-        return 0.0, breakdown
+        return 0.01, breakdown
 
     breakdown["valid_sql"] = WEIGHT_VALID_SQL
 
@@ -115,7 +115,8 @@ def grade_query(
         expected_cols = [desc[0] for desc in cur_e.description] if cur_e.description else []
         expected_rows = cur_e.fetchall()
     except Exception:
-        return sum(breakdown.values()), breakdown
+        partial = max(sum(breakdown.values()), 0.01)
+        return min(partial, 0.99), breakdown
 
     # Column count match
     if len(student_cols) == len(expected_cols):
@@ -179,6 +180,9 @@ def grade_query(
 
     total = max(sum(breakdown.values()), 0.0)
     total = min(total, 1.0)
+    # Clamp to open interval (0, 1) — strictly between 0 and 1 per OpenEnv spec
+    total = max(total, 0.01)
+    total = min(total, 0.99)
     return total, breakdown
 
 

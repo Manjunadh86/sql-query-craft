@@ -65,7 +65,7 @@ class SQLQueryCraftEnvironment(Environment):
 
         return SQLObservation(
             done=False,
-            reward=0.0,
+            reward=0.01,
             question=self._task.question,
             schema_description=SCHEMA_DESCRIPTION,
             query_result="",
@@ -92,7 +92,7 @@ class SQLQueryCraftEnvironment(Environment):
         if self._task is None:
             return SQLObservation(
                 done=True,
-                reward=0.0,
+                reward=0.01,
                 query_error="Environment not initialized. Call reset() first.",
                 metadata={},
             )
@@ -111,10 +111,14 @@ class SQLQueryCraftEnvironment(Environment):
         result_str = format_query_result(columns, rows, error)
 
         if error:
-            reward = 0.0
+            reward = 0.01
             breakdown = {"error": error}
         else:
             reward, breakdown = grade_query(self._db, self._task, action.query)
+
+        # Clamp to open interval (0, 1) per OpenEnv spec
+        reward = max(reward, 0.01)
+        reward = min(reward, 0.99)
 
         self._state.best_reward = max(self._state.best_reward, reward)
 
