@@ -190,7 +190,7 @@ async def main() -> None:
         if IMAGE_NAME:
             env = await SQLQueryCraftEnv.from_docker_image(IMAGE_NAME)
         else:
-            base_url = os.getenv("ENV_BASE_URL", "http://localhost:7069")
+            base_url = os.getenv("ENV_BASE_URL", "http://localhost:8000")
             env = SQLQueryCraftEnv(base_url=base_url)
 
         try:

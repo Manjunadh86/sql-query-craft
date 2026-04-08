@@ -11,6 +11,6 @@ RUN pip install --no-cache-dir "openenv-core[core]>=0.2.2" && \
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH="/app:$PYTHONPATH"
 
-EXPOSE 7069
+EXPOSE 8000
 
-CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7069"]
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8000"]

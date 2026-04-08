@@ -4,7 +4,7 @@ emoji: 🗃️
 colorFrom: blue
 colorTo: purple
 sdk: docker
-app_port: 7069
+app_port: 8000
 tags:
   - openenv
 ---
@@ -130,7 +130,7 @@ A realistic e-commerce database with 6 tables:
 pip install -e .
 
 # Start the server
-uvicorn server.app:app --host 0.0.0.0 --port 7069
+uvicorn server.app:app --host 0.0.0.0 --port 8000
 
 # In another terminal, run inference
 export API_BASE_URL="https://router.huggingface.co/v1"
@@ -146,7 +146,7 @@ python inference.py
 docker build -t sql-query-craft:latest .
 
 # Run
-docker run -p 7069:7069 sql-query-craft:latest
+docker run -p 8000:8000 sql-query-craft:latest
 
 # Run inference against local container
 export LOCAL_IMAGE_NAME=sql-query-craft:latest
