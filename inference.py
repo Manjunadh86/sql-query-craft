@@ -6,13 +6,13 @@ MANDATORY
     API_BASE_URL   The API endpoint for the LLM.
     MODEL_NAME     The model identifier to use for inference.
     HF_TOKEN       Your Hugging Face / API key.
-    LOCAL_IMAGE_NAME The name of the local image to use for the environment if you are using from_docker_image()
+    IMAGE_NAME     The name of the local image to use for the environment if you are using from_docker_image()
 
 STDOUT FORMAT
 - The script emits exactly three line types to stdout:
     [START] task=<task_name> env=<benchmark> model=<model_name>
     [STEP]  step=<n> action=<action_str> reward=<0.00> done=<true|false> error=<msg|null>
-    [END]   success=<true|false> steps=<n> rewards=<r1,r2,...,rn>
+    [END]   success=<true|false> steps=<n> score=<0.000> rewards=<r1,r2,...,rn>
 """
 
 import asyncio
@@ -25,7 +25,7 @@ from openai import OpenAI
 from client import SQLQueryCraftEnv
 from models import SQLAction
 
-IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
+IMAGE_NAME = os.getenv("IMAGE_NAME") or os.getenv("LOCAL_IMAGE_NAME")
 API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
 MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
@@ -34,6 +34,7 @@ TEMPERATURE = 0.3
 MAX_TOKENS = 512
 MIN_REWARD = 0.05
 MAX_REWARD = 0.95
+SUCCESS_SCORE_THRESHOLD = 0.90
 
 ALL_TASKS = [
     "easy_employee_lookup",
@@ -74,9 +75,9 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     )
 
 
-def log_end(success: bool, steps: int, rewards: List[float]) -> None:
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}", flush=True)
+    print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
 
 def build_user_prompt(
@@ -136,6 +137,7 @@ async def run_task(llm_client: OpenAI, env: SQLQueryCraftEnv, task_name: str) ->
     rewards: List[float] = []
     steps_taken = 0
     success = False
+    score = MIN_REWARD
 
     log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
 
@@ -166,6 +168,7 @@ async def run_task(llm_client: OpenAI, env: SQLQueryCraftEnv, task_name: str) ->
             obs = result.observation
 
             reward = result.reward if result.reward is not None else MIN_REWARD
+            reward = max(MIN_REWARD, min(MAX_REWARD, reward))
             done = result.done
             error = obs.query_error if obs.query_error else None
 
@@ -177,29 +180,42 @@ async def run_task(llm_client: OpenAI, env: SQLQueryCraftEnv, task_name: str) ->
             if done:
                 break
 
-        success = any(r >= 0.95 for r in rewards) if rewards else False
+        score = max(rewards) if rewards else MIN_REWARD
+        score = max(MIN_REWARD, min(MAX_REWARD, score))
+        success = score >= SUCCESS_SCORE_THRESHOLD
+
+    except Exception as exc:
+        print(f"[DEBUG] run_task error: {exc}", flush=True)
 
     finally:
-        log_end(success=success, steps=steps_taken, rewards=rewards)
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+
+
+async def create_env() -> SQLQueryCraftEnv:
+    if IMAGE_NAME:
+        return await SQLQueryCraftEnv.from_docker_image(IMAGE_NAME)
+    base_url = os.getenv("ENV_BASE_URL", "http://localhost:8000")
+    return SQLQueryCraftEnv(base_url=base_url)
 
 
 async def main() -> None:
     llm_client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
     for task_name in ALL_TASKS:
-        if IMAGE_NAME:
-            env = await SQLQueryCraftEnv.from_docker_image(IMAGE_NAME)
-        else:
-            base_url = os.getenv("ENV_BASE_URL", "http://localhost:8000")
-            env = SQLQueryCraftEnv(base_url=base_url)
-
+        env: Optional[SQLQueryCraftEnv] = None
         try:
+            env = await create_env()
             await run_task(llm_client, env, task_name)
+        except Exception as exc:
+            print(f"[DEBUG] Task {task_name} outer error: {exc}", flush=True)
+            log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
+            log_end(success=False, steps=0, score=MIN_REWARD, rewards=[MIN_REWARD])
         finally:
-            try:
-                await env.close()
-            except Exception as e:
-                print(f"[DEBUG] env.close() error: {e}", flush=True)
+            if env is not None:
+                try:
+                    await env.close()
+                except Exception as e:
+                    print(f"[DEBUG] env.close() error: {e}", flush=True)
 
 
 if __name__ == "__main__":
